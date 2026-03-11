@@ -18,11 +18,8 @@ namespace Common.Service
 
             app.UseHttpsRedirection();
             app.UseRouting();
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
+            app.UseSwagger();
+            app.UseSwaggerUI();
 
             app.MapControllers();
             app.UseCors(CORS.All);
