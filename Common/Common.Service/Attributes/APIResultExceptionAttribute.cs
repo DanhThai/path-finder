@@ -39,6 +39,7 @@ namespace Common.Service
                        Code = StatusCodes.Status401Unauthorized,
                        Status = ResponseStatus.Unauthorized
                    });
+                context.HttpContext.Response.StatusCode = 401;
             }
             else if (context.Exception is ErrorHandleException
                 || context.Exception is NotExistException)
@@ -108,10 +109,8 @@ namespace Common.Service
                    {
                        Code = StatusCodes.Status200OK,
                        Status = ResponseStatus.RequestError,
-#if DEBUG
                        //system error should not throw to frontend.
                        Message = context.Exception?.Message
-#endif
                    });
             }
         }

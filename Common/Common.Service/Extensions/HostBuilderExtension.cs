@@ -21,10 +21,10 @@ namespace Common.Service
             app.UseSwagger();
             app.UseSwaggerUI();
 
-            app.MapControllers();
             app.UseCors(CORS.All);
             app.UseAuthentication();
             app.UseAuthorization();
+            app.MapControllers();
 
             app.UseMiddleware<RuntimeContextMiddleware>();
 

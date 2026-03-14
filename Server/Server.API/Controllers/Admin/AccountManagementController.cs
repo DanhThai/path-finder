@@ -38,6 +38,13 @@ namespace Server.Admin.API
             return await _accountManagementService.Update(id, dto);
         }
 
+
+        [HttpPut("account/myprofile")]
+        public async Task<bool> UpdateMyProfile(AccountDto dto)
+        {
+            return await _accountManagementService.UpdateMyProfile(_httpContext.User, dto);
+        }
+
         [HttpPut("account/activate/{id}")]
         public async Task<bool> Activate(Guid id)
         {

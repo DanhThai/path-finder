@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using Common.Domain;
 using Common.Repository;
-using Common.Service;
 using Microsoft.EntityFrameworkCore;
 using Server.Domain.Admin;
 using Server.Domain.Learner;
@@ -22,10 +21,6 @@ namespace Server.Service.Learner
                 Sorter = GenerateSorter(parameter),
                 Filter = GenerateFilter(parameter),
                 CustomQuerable = s => s.Include(p => p.Course)
-                                        .Include(p => p.TaskResults)
-                //.Include(p => p.TaskResults)
-                //.Include(p => p.User)
-                //.Include(p => p.UserQuizAttemps)
             };
 
             var result = await _repository.GetWithPagingAsync(query, entity => new ViewCourseDto()
@@ -44,7 +39,6 @@ namespace Server.Service.Learner
                 CourseStatus = entity.Course.Status,
                 CourseType = entity.Course.CourseType,
                 CategoryId = entity.Course.CategoryId,
-                TaskCount = entity.Course.Tasks.Count,
                 Image = entity.Course.Image,
             });
 
@@ -58,7 +52,7 @@ namespace Server.Service.Learner
                     mycourse.CategoryName = category;
                 }
             }
-            //await EntityMapAsync(result.Items);
+
             return result;
         }
 
@@ -70,8 +64,24 @@ namespace Server.Service.Learner
             if (!string.IsNullOrWhiteSpace(param.SearchContent))
             {
                 var content = SearchBuilder.BuildContent(param.SearchContent);
-                filter = filter.And(p => EF.Functions.ILike(p.Course.Name, content.Pattern, content.EscapeCharacter));
+                filter = filter.And(p => EF.Functions.ILike(p.Course.Title, content.Pattern, content.EscapeCharacter));
             }
+
+            if (param.Filters != null)
+            {
+                if (param.Filters.TryGetValue(nameof(ViewCourseDto.CategoryId), out var categoryIds) && categoryIds.Count == 1)
+                {
+                    var value = Guid.Parse(categoryIds[0]);
+                    filter = filter.And(p => p.Course.CategoryId == value);
+                }
+
+                if (param.Filters.TryGetValue(nameof(ViewCourseDto.CourseType), out var courseTypes) && courseTypes.Count == 1)
+                {
+                    var value = (CourseType)Enum.Parse(typeof(CourseType), courseTypes[0]);
+                    filter = filter.And(p => p.Course.CourseType == value);
+                }
+            }
+
             return filter;
         }
 
@@ -82,70 +92,22 @@ namespace Server.Service.Learner
             switch (param.SortKey ?? "")
             {
                 default:
-                    result.SortBy = s => s.Course.Name;
+                    result.IsAscending = false;
+                    result.SortBy = s => s.ModifiedAt;
                     break;
             }
 
             return result;
         }
 
-        private async Task EntityMapAsync(List<MyCourseDto> result)
-        {
-            //var categoryIds = result.Select(x => x.Course.CategoryId).ToList();
-            //var DictCategory = (await _repository.GetAsync<CourseCategoryEntity>(p => categoryIds.Contains(p.Id)))
-            //                .ToDictionary(x => x.Id, x => x.Name);
-
-            var myCourseIds = result.Select(x => x.Id).ToList();
-            var userQuizAttempts = await _repository.GetAsync<UserQuizAttempEntity>(
-                x => myCourseIds.Contains(x.MyCourseId));
-            var userAttemptLookup = userQuizAttempts
-                .GroupBy(x => x.MyCourseId)
-                .ToDictionary(g => g.Key, g => g.ToList());
-
-            var attemptIds = userQuizAttempts.Select(x => x.Id).ToList();
-
-            foreach (var mycourse in result)
-            {
-                //if (DictCategory.TryGetValue(mycourse.Course.Id, out var category))
-                //{
-                //    mycourse.Course.CategoryName = category;
-                //}
-
-                if (mycourse.Course.CourseType == CourseType.SimulationCourse)
-                {
-                    if (!userAttemptLookup.TryGetValue(mycourse.Id, out var userAttemps))
-                        continue;
-
-                    //mycourse.UserQuizAttempDtos = userAttemps.Select(a =>
-                    //{
-                    //    answerLookup.TryGetValue(a.Id, out var answers);
-
-                    //    return new UserQuizAttempDto
-                    //    {
-                    //        Id = a.Id,
-                    //        MyCourseId = a.MyCourseId,
-                    //        TotalScore = a.TotalScore,
-                    //        StartAt = a.StartAt,
-                    //        EndAt = a.EndAt,
-                    //        Progress = a.Progress,
-
-                    //        UserAnswerDtos = answers?.Select(ans => new UserAnswerDto
-                    //        {
-                    //            Id = ans.Id,
-                    //            UserAttempId = ans.UserQuizAttempId,
-                    //            QuestionId = ans.QuestionId,
-                    //            AnswerId = ans.AnswerId
-                    //        }).ToList() ?? new List<UserAnswerDto>()
-                    //    };
-                    //}).ToList();
-                }
-            }
-        }
-
         public async Task<MyCourseDto> GetDetail(Guid id)
         {
-            var entity = await _repository.FindAsync<MyCourseEntity>(p => p.Id == id) ?? throw new NotExistException("MyCourse");
-            var category = await _repository.FindAsync<CourseCategoryEntity>(p => p.Id == entity.Course.CategoryId) ?? throw new NotExistException("Category");
+            var entity = await _repository.GetSet<MyCourseEntity>(p => p.Id == id)
+                .Include(x => x.Course)
+                .Include(x => x.UserQuizAttemps)
+                .Include(x => x.TaskResults)
+                .FirstOrDefaultAsync() ?? throw new NotExistException("MyCourse");
+
 
             var result = BaseConvert.MapBase<MyCourseDto>(entity);
             result.UserId = entity.UserId;
@@ -153,87 +115,145 @@ namespace Server.Service.Learner
             result.ApplyStatus = entity.ApplyStatus;
             result.CreatedAt = entity.CreatedAt;
             result.ModifiedAt = entity.ModifiedAt;
-            result.TaskResultDtos = entity.TaskResults.Select(x => new TaskResultDto()
-            {
-                Id = x.Id,
-                TaskId = x.TaskId,
-                MyCourseId = x.MyCourseId,
-                SubmittedAt = x.SubmittedAt,
-                SubmitAssignment = x.SubmitAssignment,
-            }).ToList();
 
-            result.Course = BaseConvert.MapBase<CourseDetailDto>(entity.Course);
-            result.Course.Title = entity.Course.Title;
-            result.Course.Name = entity.Course.Name;
-            result.Course.Description = entity.Course.Description;
-            result.Course.Summary = entity.Course.Summary;
-            result.Course.Duration = entity.Course.Duration;
-            result.Course.CourseType = entity.Course.CourseType;
-            result.Course.Status = entity.Course.Status;
-            result.Course.CategoryId = entity.Course.CategoryId;
+            result.Course = _mapper.Map<CourseDetailDto>(entity.Course);
+            var category = await _repository.FindAsync<CourseCategoryEntity>(p => p.Id == entity.Course.CategoryId);
             result.Course.CategoryName = category?.Name;
-            result.Course.TaskCount = entity.Course.Tasks.Count;
-            result.Course.Tasks = entity.Course.Tasks.Select(x =>
+
+            if (entity.Course.CourseType == CourseType.SimulationCourse)
             {
-                var dto = BaseConvert.MapBase<CourseTaskDto>(x);
-                dto.Name = x.Name;
-                dto.Summary = x.Summary;
-                dto.Introduce = x.Introduce;
-                dto.Description = x.Description;
-                dto.Duration = x.Duration;
-                dto.Order = x.Order;
-                dto.SupportingDocuments = x.SupportingDocuments;
-                dto.ExampleDocuments = x.ExampleDocuments;
-                return dto;
+                result.TaskResults = entity.TaskResults.OrderBy(p => p.Order).Select(x => new TaskResultDto()
+                {
+                    Id = x.Id,
+                    TaskId = x.TaskId,
+                    TaskName = x.TaskName,
+                    TaskSummary = x.TaskSummary,
+                    IsCompleted = x.IsCompleted,
+                    SubmittedAt = x.SubmittedAt,
+                    SubmitAssignment = x.SubmitAssignment,
+                }).ToList();
 
-            }).ToList();
-            result.Course.Questions = entity.Course.Questions.Select(x => QuizConvert.QuestionConvertToDto(x)).ToList();
-
-            var mycourses = new List<MyCourseDto>() { result };
-            await EntityMapAsync(mycourses);
+                result.Course.TaskCount = entity.TaskResults.Count;
+                var completedTask = result.TaskResults.Count(p => p.IsCompleted);
+                result.TaskProgress = (int)Math.Round(completedTask * 100.0 / result.TaskResults.Count, 2) ;
+            }
+            else if (entity.Course.CourseType == CourseType.CareerVideo)
+            {
+                if (entity.UserQuizAttemps != null)
+                {
+                    var quizResult = entity.UserQuizAttemps.FirstOrDefault();
+                    if (quizResult != null)
+                    {
+                        result.IsSubmittedQuiz = quizResult.IsSubmitted;
+                        result.QuizResult = $"{quizResult.Score}/{quizResult.TotalQuestion}";
+                        result.Course.QuestionCount = quizResult.TotalQuestion;
+                    }
+                }
+            }
 
             return result;
         }
 
         public async Task<bool> SubmitQuiz(SubmitQuizDto dto)
         {
-            var userQuizAttemp = new UserQuizAttempEntity
+            if (dto == null) throw new ArgumentNullException(nameof(dto));
+
+            var mycourse = await _repository.GetSet<MyCourseEntity>(p => p.Id == dto.MyCourseId)
+                .Include(p => p.UserQuizAttemps)
+                .FirstOrDefaultAsync() ?? throw new NotExistException("MyCourse");
+
+            if (dto.Questions?.Any() != true)
             {
-                Id = Guid.NewGuid(),
-                MyCourseId = dto.MyCourseId,
-                Progress = dto.Progress,
-                Score = dto.Score,
-                TotalQuestion = dto.TotalQuestion,
-                StartAt = dto.StartAt,
-                EndAt = dto.EndAt,
-                Questions = dto.Questions.Select(x =>
+                throw new ArgumentNullException(nameof(dto));
+            }
+
+            var questionIds = dto.Questions?.Select(q => q.QuestionId).ToList() ?? new List<Guid>();
+            var answerIds = dto.Questions?.SelectMany(q => q.AnswerIds ?? new List<Guid>()).ToList() ?? new List<Guid>();
+
+            var questions = mycourse.UserQuizAttemps
+                .Where(q => q.Questions.Any(qs => questionIds.Contains(qs.Id)))
+                .SelectMany(q => q.Questions)
+                .ToList();
+            foreach (var question in questions)
+            {
+                var correctIds = new HashSet<Guid>();
+                var selectedIds = new HashSet<Guid>();
+
+                foreach (var ans in question.Answers)
                 {
-                    var question = _mapper.Map<QuestionEntity>(x);
-                    question.Answers = _mapper.Map<List<AnswerProperty>>(question.Answers);
-                    return question;
-                }).ToList()
-            };
-            var mycourse = await _repository.FindAsync<MyCourseEntity>(p => p.Id == dto.MyCourseId) ?? throw new NotExistException("MyCourse");
-            mycourse.ProgressStatusEnum = ProgressStatusEnum.Done;
-            
-            await _repository.AddAsync(userQuizAttemp);
-            await _repository.UpdateAsync<MyCourseEntity>(mycourse);
+                    if (ans == null) continue;
+
+                    var isCorrectVal = ans.IsCorrect == true;
+                    var isSelectedVal = answerIds.Contains(ans.Id);
+
+                    if (isCorrectVal)
+                        correctIds.Add(ans.Id);
+                    if (isSelectedVal)
+                    {
+                        selectedIds.Add(ans.Id);
+                        ans.IsSelected = true;
+                    }
+                }
+
+                question.IsCorrect = correctIds.Count > 0 && correctIds.SetEquals(selectedIds);
+            }
+
+            // compute score and total explicitly and store back into dto
+            var correctCount = questions.Count(q => q?.IsCorrect == true);
+            dto.Score = correctCount;
+
+            var userQuiz = mycourse.UserQuizAttemps.FirstOrDefault();
+            userQuiz.Score = dto.Score;
+            //userQuiz.TotalQuestion = dto.TotalQuestion;
+            userQuiz.IsSubmitted = true;
+            userQuiz.StartAt = dto.StartAt;
+            userQuiz.EndAt = DateTimeOffset.UtcNow;
+            userQuiz.Questions = questions;
+
+            await _repository.ActionInTransaction(async () =>
+            {
+                await _repository.UpdateAsync(userQuiz);
+
+                mycourse.ProgressStatusEnum = ProgressStatusEnum.Done;
+                await _repository.UpdateAsync<MyCourseEntity>(mycourse);
+            });
 
             return true;
         }
 
         public async Task<bool> SubmitTask(TaskResultDto dto)
         {
-            var taskResult = new TaskResultEntity
+            if (dto.SubmitAssignment == null)
             {
-                Id = Guid.NewGuid(),
-                TaskId = dto.TaskId,
-                MyCourseId = dto.MyCourseId,
-                SubmittedAt = dto.SubmittedAt,
-                SubmitAssignment = dto.SubmitAssignment
-            };
+                throw new WarningHandleException("Need to upload assignment");
+            }
 
-            await _repository.AddAsync(taskResult);
+            var myCourse = await _repository.GetSet<MyCourseEntity>(p => p.Id == dto.MyCourseId)
+                .Include(p => p.TaskResults)
+                .FirstOrDefaultAsync() ?? throw new NotExistException("MyCourse");
+
+            var learnerTask = myCourse.TaskResults.FirstOrDefault(p => p.Id == dto.Id) ?? throw new NotExistException("LearnerTask");
+
+            if (learnerTask.IsCompleted)
+            {
+                throw new WarningHandleException("You has uploaded assignment");
+            }
+
+            learnerTask.SubmitAssignment = dto.SubmitAssignment;
+            learnerTask.IsCompleted = true;
+            learnerTask.SubmittedAt = DateTimeOffset.UtcNow;
+
+            await _repository.ActionInTransaction(async () =>
+            {
+                var completedCount = myCourse.TaskResults.Count(p => p.IsCompleted);
+                if (completedCount == myCourse.TaskResults.Count)
+                {
+                    myCourse.ProgressStatusEnum = ProgressStatusEnum.Done;
+                    await _repository.UpdateAsync(myCourse);
+                }
+                await _repository.UpdateAsync(learnerTask);
+
+            });
 
             return true;
         }

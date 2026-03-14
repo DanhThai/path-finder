@@ -15,7 +15,7 @@ namespace Common.Repository
             {
                 var userManager = serviceProvider.GetRequiredService<UserManager<AccountEntity>>();
                 string adminEmail = "admin@gmail.com";
-                string adminPassword = "admin";
+                string adminPassword = "Admin@123";
 
                 var user = await userManager.FindByEmailAsync(adminEmail);
                 if (user == null)

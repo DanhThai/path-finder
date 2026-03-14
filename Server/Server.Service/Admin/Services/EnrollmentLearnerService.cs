@@ -15,13 +15,13 @@ namespace Server.Service.Admin
             {
                 Pager = new Pager { PageIndex = parameter.PageIndex, PageSize = parameter.PageSize },
                 Sorter = GenerateSorter(parameter),
-                Filter = GenerateFilter(parameter)
+                Filter = GenerateFilter(parameter, courseId)
             };
 
             var result = await _repository.GetWithPagingAsync(query, s => new EnrollmentLearnerDto
             {
                 Id = s.Id,
-                LearnerId = s.UserId,
+                //LearnerId = s.UserId,
                 LearnerID = s.Learner.LearnerID,
                 LearnerName = s.Learner.Account.Name,
                 ProgressStatus = s.ProgressStatusEnum,
@@ -33,9 +33,10 @@ namespace Server.Service.Admin
 
         public async Task<LearnerEnrollmentResultDto> GetEnrollmentResult(Guid myCourseId)
         {
-            var myCourse = await _repository.GetSet<MyCourseEntity>(p => p.CourseId == myCourseId)
+            var myCourse = await _repository.GetSet<MyCourseEntity>(p => p.Id == myCourseId)
                 .Select(s => new
                 {
+                    s.Id,
                     s.CourseId,
                     s.Course.Name,
                     s.Course.CourseType,
@@ -49,22 +50,22 @@ namespace Server.Service.Admin
                 LearnerID = myCourse.LearnerID,
             };
 
-
             if (myCourse.CourseType == CourseType.SimulationCourse)
             {
                 var courseTaskQuery = from task in _repository.GetSet<CourseTaskEntity>(p => p.CourseId == myCourse.CourseId)
-                                  join learnerTask in _repository.GetSet<TaskResultEntity>(p => p.MyCourseId == myCourseId)
+                                  join learnerTask in _repository.GetSet<TaskResultEntity>(p => p.MyCourseId == myCourse.Id)
                                   on task.Id equals learnerTask.TaskId into LT
                                   from learnerTask in LT.DefaultIfEmpty()
                                   select new
                                   {
                                       task.Id,
                                       task.Name,
+                                      task.Order,
                                       learnerTask.SubmitAssignment,
                                       learnerTask.SubmittedAt,
                                       learnerTask.FeedBacks,
                                   };
-                var courseTasks = await courseTaskQuery.ToListAsync();
+                var courseTasks = await courseTaskQuery.OrderBy(p => p.Order).ToListAsync();
                 result.LearnerTasks = new List<LearnerTaskDto>();
                 foreach (var courseTask in courseTasks)
                 {
@@ -75,21 +76,71 @@ namespace Server.Service.Admin
                         CourseType = result.CourseType,
                         SubmittedAt = courseTask.SubmittedAt,
                         SubmitedAssignment = courseTask.SubmitAssignment,
-                        FeedBacks = courseTask.FeedBacks.Select(s => new LearnerFeedBackDto
+                        FeedBacks = courseTask.FeedBacks.OrderByDescending(p => p.CreatedAt).Select(s => new UserFeedBackDto
                         {
                             Id = s.Id,
                             Title = s.Title,
                             Content = s.Content,
                             SendOn = s.CreatedAt,
+                            SendById = s.CreatedBy,
                         }).ToList(),
                     };
+
+                    if (courseTask.FeedBacks?.Any() == true)
+                    {
+                        var sendByIds = courseTask.FeedBacks.Select(s => s.CreatedBy).Distinct().ToList();
+                        var userDict = await _repository.GetSet<AccountEntity>(p => sendByIds.Contains(p.Id))
+                            .Select(s => new { s.Id, s.Name })
+                            .ToDictionaryAsync(k => k.Id, v => v.Name);
+
+                        task.FeedBacks.ForEach(i => i.SendBy = userDict.GetValueOrDefault(i.SendById));
+                    }
 
                     result.LearnerTasks.Add(task);
                 }
             }
             else if (myCourse.CourseType == CourseType.CareerVideo)
             {
-                 // TODO
+                 var quizResult = await _repository.GetSet<UserQuizAttempEntity>(p => p.MyCourseId == myCourse.Id)
+                    .Select(s => new
+                    {
+                        s.IsSubmitted,
+                        s.Score,
+                        s.TotalQuestion,
+                        s.CreatedAt,
+                        s.Questions,
+                    }).FirstOrDefaultAsync();
+
+                if (quizResult != null && quizResult.IsSubmitted)
+                {
+                    result.QuizResult = $"{quizResult.Score}/{quizResult.TotalQuestion}";
+
+                    if (quizResult.Questions != null)
+                    {
+                        result.QuestionResults = new List<LearnerQuestionResultDto>();
+
+                        foreach (var question in quizResult.Questions.OrderBy(p => p.QuestionOrder))
+                        {
+                            var answers = question.Answers.Select(s => new LearnerAnswerDto
+                            {
+                                Order = s.Order,
+                                Name = s.Name,
+                                ExplainDescription = s.ExplainDescription,
+                                IsCorrect = s.IsCorrect,
+                                IsSelected = s.IsSelected ?? false,
+                            }).ToList();
+
+                            result.QuestionResults.Add(new LearnerQuestionResultDto
+                            {
+                                QuestionId = question.Id,
+                                QuestionName = question.Name,
+                                QuestionOrder = question.QuestionOrder,
+                                QuestionType = question.QuestionType,
+                                Answers = answers.OrderBy(p => p.Order).ToList()
+                            });
+                        }
+                    }
+                }
             }
 
             return result;
@@ -119,9 +170,10 @@ namespace Server.Service.Admin
             return true;
         }
 
-        private Expression<Func<MyCourseEntity, bool>> GenerateFilter(CTableParameter param)
+        private Expression<Func<MyCourseEntity, bool>> GenerateFilter(CTableParameter param, Guid courseId)
         {
             var filter = PredicateBuilder.True<MyCourseEntity>();
+            filter = filter.And(p => p.CourseId == courseId);
 
             if (!string.IsNullOrWhiteSpace(param.SearchContent))
             {
@@ -145,6 +197,10 @@ namespace Server.Service.Admin
                     break;
                 case "name":
                     result.SortBy = s => s.Learner.Account.Name;
+                    break;
+                default:
+                    result.IsAscending = false;
+                    result.SortBy = s => s.CreatedAt;
                     break;
             }
             return result;

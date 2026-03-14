@@ -107,7 +107,7 @@ namespace Server.Service.Admin
 
             await _repository.ActionInTransaction(async () =>
             {
-                await UpdateImage(dto, entity);
+                entity.Image = dto.Image;
 
                 if (entity.CourseType == CourseType.SimulationCourse)
                 {
@@ -129,6 +129,7 @@ namespace Server.Service.Admin
                         var questionEntity = _mapper.Map<QuestionEntity>(question);
                         questionEntity.Id = Guid.NewGuid();
                         questionEntity.CourseId = entity.Id;
+                        questionEntity.Answers.ForEach(i => i.Id = Guid.NewGuid());
 
                         entity.Questions.Add(questionEntity);
                     }
@@ -168,7 +169,7 @@ namespace Server.Service.Admin
 
             await _repository.ActionInTransaction(async () =>
             {
-                await UpdateImage(dto, course);
+                course.Image = dto.Image;
 
                 if (course.Status == CourseStatus.Draft)
                 {
@@ -189,33 +190,49 @@ namespace Server.Service.Admin
             return true;
         }
 
-        public async Task<bool> Publish(Guid id)
+        public async Task<bool> Publish(List<Guid> ids)
         {
-            return await UpdateStatus(id, CourseStatus.Published);
-        }
+            var courses = await _repository.GetSet<CourseEntity>(p => ids.Contains(p.Id)).ToListAsync();
 
-        public async Task<bool> Unpublish(Guid id)
-        {
-            return await UpdateStatus(id, CourseStatus.Unpublished);
-        }
+            if (courses.Count != ids.Count)
+            {
+                throw new NotExistException("Course");
+            }
 
-        #region Private methods
-
-        private async Task<bool> UpdateStatus(Guid id, CourseStatus status)
-        {
-            var course = await _repository.GetSet<CourseEntity>(p => p.Id == id).FirstOrDefaultAsync()
-                ?? throw new NotExistException("Course");
-
-            if (course.Status == status)
+            if (courses.Any(p => p.Status == CourseStatus.Published))
             {
                 throw new DataValidationException("Can not update status", "", CErrorCode.StatusNotSupport);
             }
 
-            course.Status = status;
+            courses.ForEach(i => i.Status = CourseStatus.Published);
 
-            await _repository.UpdateAsync(course);
+            await _repository.UpdateRangeAsync(courses);
+
             return true;
         }
+
+        public async Task<bool> Unpublish(List<Guid> ids)
+        {
+            var courses = await _repository.GetSet<CourseEntity>(p => ids.Contains(p.Id)).ToListAsync();
+
+            if (courses.Count != ids.Count)
+            {
+                throw new NotExistException("Course");
+            }
+
+            if (courses.Any(p => p.Status == CourseStatus.Unpublished))
+            {
+                throw new DataValidationException("Can not update status", "", CErrorCode.StatusNotSupport);
+            }
+
+            courses.ForEach(i => i.Status = CourseStatus.Unpublished);
+
+            await _repository.UpdateRangeAsync(courses);
+
+            return true;
+        }
+
+        #region Private methods
 
         private async Task UpdateImage(CourseDetailDto dto, CourseEntity entity)
         {

@@ -1,8 +1,9 @@
-﻿namespace Server.Domain.Admin
+﻿using Common.Domain;
+
+namespace Server.Domain.Admin
 {
-    public class CourseCategoryDto
+    public class CourseCategoryDto : BaseDto
     {
-        public Guid Id { get; set; }
         public string Name { get; set; }
     }
 }

@@ -7,7 +7,7 @@ using Server.Service.Learner;
 namespace Server.Learner.API
 {
     [ApiVersion("1")]
-    public class TaskController : APIBaseController
+    public class TaskController : LearnerAPIBaseController
     {
         private readonly ITaskService _taskService;
         public TaskController(IHttpContextAccessor accessor, ITaskService taskService) : base(accessor)
@@ -15,16 +15,10 @@ namespace Server.Learner.API
             _taskService = taskService;
         }
 
-        [HttpGet("task/courseid={courseId}")]
-        public async Task<List<CourseTaskDto>> GetTaskByCourseId([FromRoute] Guid courseId)
+        [HttpGet("learnertask")]
+        public async Task<CourseTaskViewDetailDto> GetLearnerTask(Guid learnerTaskId)
         {
-            return await _taskService.GetTaskByCourseId(courseId);
-        }
-
-        [HttpGet("taskresult/taskid={taskId}")]
-        public async Task<TaskResultDto> GetTaskResultByTaskId([FromRoute] Guid taskId)
-        {
-            return await _taskService.GetTaskResultByTaskId(taskId);
+            return await _taskService.GetLearnerTask(learnerTaskId);
         }
     }
 }

@@ -6,7 +6,8 @@ namespace Server.Service.Learner
 {
     public interface ITaskService : IScopeDependency
     {
-        Task<List<CourseTaskDto>> GetTaskByCourseId(Guid courseId);
+        Task<List<CourseTaskViewDetailDto>> GetTaskByCourseId(Guid courseId);
+        Task<CourseTaskViewDetailDto> GetLearnerTask(Guid learnerTaskId);
         Task<TaskResultDto> GetTaskResultByTaskId(Guid taskId);
     }
 }

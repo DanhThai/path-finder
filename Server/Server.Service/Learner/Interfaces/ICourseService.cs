@@ -1,5 +1,6 @@
 ﻿using Common.Domain;
 using Common.Service;
+using Server.Domain.Admin;
 using Server.Domain.Learner;
 
 namespace Server.Service.Learner
@@ -7,7 +8,7 @@ namespace Server.Service.Learner
     public interface ICourseService : IScopeDependency
     {
         Task<TableInfo<ViewCourseDto>> GetPaging(CTableParameter parameter, CourseType courseType);
-        Task<MyCourseDto> GetDetail(Guid id);
-        Task<bool> Apply(MyCourseCreateDto dto);
+        Task<CourseDetailDto> GetDetail(Guid id);
+        Task<Guid> Apply(MyCourseCreateDto dto);
     }
 }

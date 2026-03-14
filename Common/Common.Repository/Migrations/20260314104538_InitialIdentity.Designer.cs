@@ -14,7 +14,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Common.Repository.Migrations
 {
     [DbContext(typeof(ApplicationDBContext))]
-    [Migration("20260311030323_InitialIdentity")]
+    [Migration("20260314104538_InitialIdentity")]
     partial class InitialIdentity
     {
         /// <inheritdoc />
@@ -39,6 +39,9 @@ namespace Common.Repository.Migrations
                     b.Property<int>("AccountType")
                         .HasColumnType("integer");
 
+                    b.Property<DocumentProperty>("Avatar")
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
@@ -60,6 +63,9 @@ namespace Common.Repository.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("ModifiedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("ModifiedBy")
@@ -93,9 +99,6 @@ namespace Common.Repository.Migrations
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
-
-                    b.Property<DateTimeOffset>("UpdateAt")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
@@ -415,9 +418,6 @@ namespace Common.Repository.Migrations
                     b.Property<Guid>("CreatedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<bool?>("IsCorrect")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -490,14 +490,14 @@ namespace Common.Repository.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("CourseTaskId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("CreatedBy")
                         .HasColumnType("uuid");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -511,6 +511,9 @@ namespace Common.Repository.Migrations
                     b.Property<Guid>("MyCourseId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
                     b.Property<DocumentProperty>("SubmitAssignment")
                         .HasColumnType("jsonb");
 
@@ -520,11 +523,17 @@ namespace Common.Repository.Migrations
                     b.Property<Guid>("TaskId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("TaskName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TaskSummary")
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("CourseTaskId");
-
                     b.HasIndex("MyCourseId");
+
+                    b.HasIndex("TaskId");
 
                     b.ToTable("TaskResult", (string)null);
                 });
@@ -547,6 +556,9 @@ namespace Common.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsSubmitted")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTimeOffset>("ModifiedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -559,10 +571,7 @@ namespace Common.Repository.Migrations
                     b.Property<Guid>("MyCourseId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Progress")
-                        .HasColumnType("integer");
-
-                    b.Property<List<QuestionEntity>>("Questions")
+                    b.Property<List<QuestionProperty>>("Questions")
                         .HasColumnType("jsonb");
 
                     b.Property<int>("Score")
@@ -788,13 +797,15 @@ namespace Common.Repository.Migrations
 
             modelBuilder.Entity("Common.Repository.TaskResultEntity", b =>
                 {
-                    b.HasOne("Common.Repository.CourseTaskEntity", "CourseTask")
-                        .WithMany()
-                        .HasForeignKey("CourseTaskId");
-
                     b.HasOne("Common.Repository.MyCourseEntity", "MyCourse")
                         .WithMany("TaskResults")
                         .HasForeignKey("MyCourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Common.Repository.CourseTaskEntity", "CourseTask")
+                        .WithMany()
+                        .HasForeignKey("TaskId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

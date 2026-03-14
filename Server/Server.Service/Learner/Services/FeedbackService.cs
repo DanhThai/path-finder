@@ -11,7 +11,7 @@ namespace Server.Service.Learner
         ) : IFeedbackService
     {
 
-        public async Task<TableInfo<FeedbackDto>> GetPaging(CTableParameter parameter)
+        public async Task<TableInfo<LearnerFeedbackDto>> GetPaging(CTableParameter parameter)
         {
             var query = new TableQueryParameter<FeedBackEntity>
             {
@@ -20,11 +20,12 @@ namespace Server.Service.Learner
                 Filter = GenerateFilter(parameter)
             };
 
-            var result = await _repository.GetWithPagingAsync(query, entity => new FeedbackDto()
+            var result = await _repository.GetWithPagingAsync(query, entity => new LearnerFeedbackDto()
             {
                 Id = entity.Id,
                 UserId = entity.UserId,
                 Content = entity.Content,
+                Title = entity.Title,
                 CreatedAt = entity.CreatedAt,
                 ModifiedAt = entity.ModifiedAt
             });

@@ -40,16 +40,16 @@ namespace Server.Admin.API
             return await _courseManagementService.Update(id, dto);
         }
 
-        [HttpPut("course/publish/{id}")]
-        public async Task<bool> Publish(Guid id)
+        [HttpPut("course/publish")]
+        public async Task<bool> Publish(List<Guid> ids)
         {
-            return await _courseManagementService.Publish(id);
+            return await _courseManagementService.Publish(ids);
         }
 
-        [HttpPut("course/unpublish/{id}")]
-        public async Task<bool> Unpublish(Guid id)
+        [HttpPut("course/unpublish")]
+        public async Task<bool> Unpublish(List<Guid> ids)
         {
-            return await _courseManagementService.Unpublish(id);
+            return await _courseManagementService.Unpublish(ids);
         }
     }
 }

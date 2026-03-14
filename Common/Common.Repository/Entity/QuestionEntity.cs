@@ -8,8 +8,6 @@ namespace Common.Repository
         public Guid CourseId { get; set; }
         public int QuestionOrder { get; set; }
         public string Name { get; set; }
-        public bool? IsCorrect { get; set; }
-        //public string Description { get; set; }
         public CQuestionType QuestionType { get; set; }
 
         [Column(TypeName = "jsonb")]

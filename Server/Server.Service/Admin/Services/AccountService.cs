@@ -28,7 +28,7 @@ namespace Server.Service.Admin
                 EmailConfirmed = true,
                 AccountType = CAccountType.Learner,
                 CreateAt = DateTimeOffset.UtcNow,
-                UpdateAt = DateTimeOffset.UtcNow,
+                ModifiedAt = DateTimeOffset.UtcNow,
             };
 
             var createResult = await _userManager.CreateAsync(user, dto.Password);
@@ -90,6 +90,7 @@ namespace Server.Service.Admin
             {
                 user = new AccountEntity
                 {
+                    Id = Guid.NewGuid(),
                     Name = payload.Name,
                     Email = email,
                     UserName = email,
@@ -97,14 +98,25 @@ namespace Server.Service.Admin
                     EmailConfirmed = true,
                     Status = CUserStatus.Active,
                     CreateAt = DateTimeOffset.UtcNow,
-                    UpdateAt = DateTimeOffset.UtcNow
+                    ModifiedAt = DateTimeOffset.UtcNow
                 };
 
-                var createResult = await _userManager.CreateAsync(user);
-                if (!createResult.Succeeded)
+                await _repository.ActionInTransaction(async () =>
                 {
-                    throw new WarningHandleException($"Failed to login google account. {createResult.Errors.Select(e => e.Description)}");
-                }
+                    var createResult = await _userManager.CreateAsync(user, "Student@123");
+                    if (!createResult.Succeeded)
+                    {
+                        throw new WarningHandleException($"Failed to login google account. {createResult.Errors.Select(e => e.Description)}");
+                    }
+
+                    var profile = new LearnerProfileEntity
+                    {
+                        Id = user.Id,
+                    };
+
+                    await _repository.AddAsync(profile);
+                });
+
 
                 await _userManager.AddLoginAsync(user, new UserLoginInfo("Google", payload.Subject, "Google"));
                 await _userManager.ConfirmEmailAsync(user, await _userManager.GenerateEmailConfirmationTokenAsync(user));
@@ -150,11 +162,9 @@ namespace Server.Service.Admin
 
         public async Task<AccountDto> GetProfileAsync(ClaimsPrincipal userPrincipal)
         {
-            var userId = userPrincipal.FindFirstValue(ClaimTypes.NameIdentifier)
-                ?? throw new NotExistException("Account");
+            var userId = userPrincipal.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new NotExistException("Account");
 
-            var user = await _userManager.FindByIdAsync(userId)
-                ?? throw new NotExistException("Account");
+            var user = await _userManager.FindByIdAsync(userId) ?? throw new UnauthorizedAccessException();
 
             return new AccountDto
             {
@@ -162,6 +172,7 @@ namespace Server.Service.Admin
                 Username = user.UserName,
                 Email = user.Email,
                 Name = user.Name,
+                Avatar = user.Avatar,
                 AccountType = user.AccountType,
                 Status = user.Status
             };

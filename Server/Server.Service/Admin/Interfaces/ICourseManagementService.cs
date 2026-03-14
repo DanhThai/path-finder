@@ -10,7 +10,7 @@ namespace Server.Service.Admin
         Task<CourseDetailDto> GetDetail(Guid id);
         Task<bool> Add(CourseDetailDto dto);
         Task<bool> Update(Guid id, CourseDetailDto dto);
-        Task<bool> Publish(Guid id);
-        Task<bool> Unpublish(Guid id);
+        Task<bool> Publish(List<Guid> ids);
+        Task<bool> Unpublish(List<Guid> ids);
     }
 }

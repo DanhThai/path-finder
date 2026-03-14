@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Server.Domain.Admin;
 using System.Linq.Expressions;
+using System.Security.Claims;
 
 namespace Server.Service.Admin
 {
@@ -25,7 +26,8 @@ namespace Server.Service.Admin
                 Email = account.Email,
                 AccountType = account.AccountType,
                 Status = account.Status,
-                ModifiedAt = account.UpdateAt,
+                ModifiedAt = account.ModifiedAt,
+                Avatar = account.Avatar
             };
         }
 
@@ -46,7 +48,7 @@ namespace Server.Service.Admin
                 Email = account.Email,
                 AccountType = account.AccountType,
                 Status = account.Status,
-                ModifiedAt = account.UpdateAt,
+                ModifiedAt = account.ModifiedAt,
             });
         }
 
@@ -54,31 +56,39 @@ namespace Server.Service.Admin
         {
             var entity = new AccountEntity
             {
+                Id = Guid.NewGuid(),
                 Name = dto.Name,
                 UserName = dto.Email,
                 Email = dto.Email,
                 EmailConfirmed = true,
                 AccountType = dto.AccountType,
                 CreateAt = DateTimeOffset.UtcNow,
-                UpdateAt = DateTimeOffset.UtcNow
+                ModifiedAt = DateTimeOffset.UtcNow
             };
 
-            var password = string.Empty;
-            if (dto.AccountType == CAccountType.Admin)
+            if (string.IsNullOrWhiteSpace(dto.Password))
             {
-                password = "Admin@123";
-            }
-            else
-            {
-                password = "Learner@123";
+                throw new WarningHandleException("Password is required");
             }
 
-            var result = await _userManager.CreateAsync(entity, password);
-
-            if (!result.Succeeded)
+            await _repository.ActionInTransaction(async () =>
             {
-                throw new WarningHandleException($"Can't create account: {string.Join(",", result.Errors.Select(s => s.Description))}");
-            }
+                var result = await _userManager.CreateAsync(entity, dto.Password);
+                if (!result.Succeeded)
+                {
+                    throw new WarningHandleException($"Can't create account: {string.Join(",", result.Errors.Select(s => s.Description))}");
+                }
+
+                if (dto.AccountType == CAccountType.Learner)
+                {
+                    var learnerProfile = new LearnerProfileEntity
+                    {
+                        Id = entity.Id,
+                    };
+                    await _repository.AddAsync(learnerProfile);
+                }
+            });
+
 
             return true;
         }
@@ -100,6 +110,24 @@ namespace Server.Service.Admin
                 ?? throw new NotExistException("Account");
 
             account.Name = dto.Name;
+
+            await _repository.UpdateAsync(account);
+            return true;
+        }
+
+        public async Task<bool> UpdateMyProfile(ClaimsPrincipal userPrincipal, AccountDto dto)
+        {
+            var userId = userPrincipal.FindFirstValue(ClaimTypes.NameIdentifier)
+               ?? throw new NotExistException("Account");
+
+            var account = await _userManager.FindByIdAsync(userId)
+                ?? throw new NotExistException("Account");
+
+            account.Name = dto.Name;
+            if (dto.Avatar != null)
+            {
+                account.Avatar = dto.Avatar;
+            }
 
             await _repository.UpdateAsync(account);
             return true;
@@ -166,7 +194,7 @@ namespace Server.Service.Admin
                     result.SortBy = s => s.Status;
                     break;
                 case "modifiedat":
-                    result.SortBy = s => s.UpdateAt;
+                    result.SortBy = s => s.ModifiedAt;
                     break;
                 default:
                     result.SortBy = s => s.Name;

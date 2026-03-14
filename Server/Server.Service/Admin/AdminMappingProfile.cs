@@ -11,6 +11,8 @@ namespace Server.Service.Learner
             CreateMap<CourseTaskEntity, CourseTaskDto>().ReverseMap();
             CreateMap<QuestionEntity, QuestionDto>().ReverseMap();
             CreateMap<AnswerProperty, AnswerPropertyDto>().ReverseMap();
+            CreateMap<FeedBackEntity, UserFeedBackDto>().ReverseMap();
+            CreateMap<QuestionProperty, QuestionEntity>().ReverseMap();
         }
     }
 }

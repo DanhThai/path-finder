@@ -4,7 +4,7 @@ namespace Server.Domain.Admin
 {
     public class EnrollmentLearnerDto: BaseDto
     {
-        public Guid LearnerId { get; set; }
+        //public Guid LearnerId { get; set; }
         public string LearnerName { get; set; }
         public string LearnerID { get; set; }
         public ProgressStatusEnum ProgressStatus { get; set; }
@@ -37,16 +37,17 @@ namespace Server.Domain.Admin
         public CourseType CourseType { get; set; }
         public DocumentProperty SubmitedAssignment { get; set; }
         public DateTimeOffset SubmittedAt { get; set; }
-        public List<LearnerFeedBackDto> FeedBacks { get; set; }
+        public List<UserFeedBackDto> FeedBacks { get; set; }
     }
 
-    public class LearnerFeedBackDto
+    public class UserFeedBackDto
     {
         public Guid Id { get; set; }
         public string Title { get; set; }
         public string Content { get; set; }
         public DateTimeOffset SendOn { get; set; }
         public string SendBy { get; set; }
+        public Guid SendById { get; set; }
     }
 
     public class LearnerAnswerDto

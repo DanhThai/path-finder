@@ -7,7 +7,7 @@ using Server.Service.Learner;
 namespace Server.Learner.API
 {
     [ApiVersion("1")]
-    public class LearnerController : APIBaseController
+    public class LearnerController : LearnerAPIBaseController
     {
         private readonly ILearnerService _learnerService;
         public LearnerController(IHttpContextAccessor accessor, ILearnerService learnerService) : base(accessor)

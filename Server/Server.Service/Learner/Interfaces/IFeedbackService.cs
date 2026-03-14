@@ -6,6 +6,6 @@ namespace Server.Service.Learner
 {
     public interface IFeedbackService : IScopeDependency
     {
-        Task<TableInfo<FeedbackDto>> GetPaging(CTableParameter parameter);
+        Task<TableInfo<LearnerFeedbackDto>> GetPaging(CTableParameter parameter);
     }
 }

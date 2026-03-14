@@ -1,4 +1,6 @@
-﻿namespace Server.Domain.Learner
+﻿using Common.Domain;
+
+namespace Server.Domain.Learner
 {
     public class LearnerProfileDto
     {
@@ -6,12 +8,9 @@
         public string Name { get; set; }
         public string Email { get; set; }
         public string LearnerID { get; set; }
+        public DocumentProperty Avatar { get; set; }
 
-        public Guid MajorId { get; set; }
+        public Guid? MajorId { get; set; }
         public string MajorName { get; set; }
-        public int CountMyCourse { get; set; }
-        public int CountTaskSubmitted { get; set; }
-        public int CountQuizSubmitted { get; set; }
-        public int CountFeedback { get; set; }
     }
 }

@@ -37,8 +37,9 @@ namespace Common.Repository.Migrations
                     Name = table.Column<string>(type: "text", nullable: true),
                     AccountType = table.Column<int>(type: "integer", nullable: false),
                     Status = table.Column<int>(type: "integer", nullable: false),
+                    Avatar = table.Column<DocumentProperty>(type: "jsonb", nullable: true),
                     CreateAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    UpdateAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    ModifiedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     ModifiedBy = table.Column<Guid>(type: "uuid", nullable: false),
                     CreatedBy = table.Column<Guid>(type: "uuid", nullable: false),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -349,7 +350,6 @@ namespace Common.Repository.Migrations
                     CourseId = table.Column<Guid>(type: "uuid", nullable: false),
                     QuestionOrder = table.Column<int>(type: "integer", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: true),
-                    IsCorrect = table.Column<bool>(type: "boolean", nullable: true),
                     QuestionType = table.Column<int>(type: "integer", nullable: false),
                     Answers = table.Column<List<AnswerProperty>>(type: "jsonb", nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
@@ -376,9 +376,12 @@ namespace Common.Repository.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     TaskId = table.Column<Guid>(type: "uuid", nullable: false),
                     MyCourseId = table.Column<Guid>(type: "uuid", nullable: false),
+                    TaskName = table.Column<string>(type: "text", nullable: true),
+                    TaskSummary = table.Column<string>(type: "text", nullable: true),
+                    Order = table.Column<int>(type: "integer", nullable: false),
+                    IsCompleted = table.Column<bool>(type: "boolean", nullable: false),
                     SubmittedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     SubmitAssignment = table.Column<DocumentProperty>(type: "jsonb", nullable: true),
-                    CourseTaskId = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     ModifiedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     ModifiedBy = table.Column<Guid>(type: "uuid", nullable: false),
@@ -389,10 +392,11 @@ namespace Common.Repository.Migrations
                 {
                     table.PrimaryKey("PK_TaskResult", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_TaskResult_CourseTask_CourseTaskId",
-                        column: x => x.CourseTaskId,
+                        name: "FK_TaskResult_CourseTask_TaskId",
+                        column: x => x.TaskId,
                         principalTable: "CourseTask",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_TaskResult_MyCourse_MyCourseId",
                         column: x => x.MyCourseId,
@@ -409,10 +413,10 @@ namespace Common.Repository.Migrations
                     MyCourseId = table.Column<Guid>(type: "uuid", nullable: false),
                     Score = table.Column<int>(type: "integer", nullable: false),
                     TotalQuestion = table.Column<int>(type: "integer", nullable: false),
-                    Progress = table.Column<int>(type: "integer", nullable: false),
+                    IsSubmitted = table.Column<bool>(type: "boolean", nullable: false),
                     StartAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     EndAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    Questions = table.Column<List<QuestionEntity>>(type: "jsonb", nullable: true),
+                    Questions = table.Column<List<QuestionProperty>>(type: "jsonb", nullable: true),
                     MyCourseEntityId = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     ModifiedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
@@ -530,14 +534,14 @@ namespace Common.Repository.Migrations
                 column: "CourseId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TaskResult_CourseTaskId",
-                table: "TaskResult",
-                column: "CourseTaskId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_TaskResult_MyCourseId",
                 table: "TaskResult",
                 column: "MyCourseId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TaskResult_TaskId",
+                table: "TaskResult",
+                column: "TaskId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserQuizAttemp_MyCourseEntityId",

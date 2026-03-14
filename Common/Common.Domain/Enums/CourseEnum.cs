@@ -25,7 +25,8 @@ namespace Common.Domain
 
     public enum ApplyStatus
     {
-        Apply = 0,
-        ReApply = 1,
+        None = 0,
+        Apply = 1,
+        ReApply = 2
     }
 }

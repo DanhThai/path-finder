@@ -51,12 +51,5 @@ namespace Server.API
         {
             return await _accountService.ResetPasswordAsync(dto);
         }
-
-        [HttpGet("me")]
-        [Authorize]
-        public async Task<AccountDto> Me()
-        {
-            return await _accountService.GetProfileAsync(_httpContext.User);
-        }
     }
 }

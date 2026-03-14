@@ -1,4 +1,5 @@
 ﻿using Common.Domain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Server.Domain.Admin;
 using Server.Service.Admin;
@@ -45,6 +46,7 @@ namespace Server.API.Controllers.Admin
         }
 
         [HttpGet("coursecategory/selectbox")]
+        [AllowAnonymous]
         public async Task<List<CComboxItem>> GetCategorySelectbox()
         {
             return await _courseCategoryService.GetCategorySelectbox();

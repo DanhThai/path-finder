@@ -6,7 +6,7 @@ using Server.Service.Learner;
 namespace Server.Learner.API
 {
     [ApiVersion("1")]
-    public class UserAttempQuizController : APIBaseController
+    public class UserAttempQuizController : LearnerAPIBaseController
     {
         private readonly IUserQuizAttempService _userQuizAttempService;
         public UserAttempQuizController(IHttpContextAccessor accessor, IUserQuizAttempService userQuizAttempService) : base(accessor)

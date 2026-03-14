@@ -7,6 +7,10 @@ namespace Common.Repository
     {
         public Guid TaskId { get; set; }
         public Guid MyCourseId { get; set; }
+        public string TaskName { get; set; }
+        public string TaskSummary { get; set; }
+        public int Order { get; set; }
+        public bool IsCompleted { get; set; }
         public DateTimeOffset SubmittedAt { get; set; }
 
         [Column(TypeName = "jsonb")]

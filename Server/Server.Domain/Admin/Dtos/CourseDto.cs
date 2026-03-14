@@ -36,5 +36,9 @@ namespace Server.Domain.Admin
         public List<CourseTaskDto> Tasks { get; set; }
         public List<QuestionDto> Questions { get; set; }
         public int TaskCount { get; set; }
+        public int QuestionCount { get; set; }
+
+        public bool HasApplied { get; set; }
+        public Guid MyCourseId { get; set; }
     }
 }

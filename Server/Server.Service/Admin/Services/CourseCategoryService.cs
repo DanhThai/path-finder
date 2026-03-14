@@ -23,6 +23,8 @@ namespace Server.Service.Admin
             {
                 Id = s.Id,
                 Name = s.Name,
+                IsDeleted = s.IsDeleted,
+                ModifiedAt = s.ModifiedAt,
             });
         }
 

@@ -29,7 +29,7 @@ namespace Server.Admin.API
         }
 
         [HttpPost("enrollmentlearner/feedback")]
-        public async Task<bool> GetPaging([FromBody] FeedBackDto dto)
+        public async Task<bool> SendFeedback([FromBody] FeedBackDto dto)
         {
             return await _enrollmentLearnerService.SendFeedback(dto);
         }
