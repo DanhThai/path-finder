@@ -63,6 +63,32 @@ namespace Server.Service.Learner
             }
             return result;
         }
+        
+        public async Task<List<ViewCourseDto>> GetPopularCourses()
+        {
+            var courses = await _repository.GetSet<CourseEntity>(p => p.Status == CourseStatus.Published && !p.IsDeleted)
+                .Select(s => new ViewCourseDto
+                {
+                    Id = s.Id,
+                    CreatedAt = s.CreatedAt,
+                    ModifiedAt = s.ModifiedAt,
+                    CourseTitle = s.Title,
+                    Duration = s.Duration,
+                    CourseSummary = s.Summary,
+                    VideoURL = s.VideoURL,
+                    CourseStatus = s.Status,
+                    CourseType = s.CourseType,
+                    CategoryId = s.CategoryId,
+                    TaskCount = s.Tasks.Count,
+                    Image = s.Image,
+                    EnrolledCount = s.EnrolledLearners.Count,
+                })
+                .OrderByDescending(k => k.EnrolledCount).ThenBy(k => k.CourseTitle)
+                .Take(3)
+                .ToListAsync();
+
+            return courses;
+        }
 
         private Expression<Func<CourseEntity, bool>> GenerateFilter(CTableParameter param, CourseType courseType)
         {

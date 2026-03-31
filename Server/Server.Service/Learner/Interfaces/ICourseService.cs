@@ -8,6 +8,7 @@ namespace Server.Service.Learner
     public interface ICourseService : IScopeDependency
     {
         Task<TableInfo<ViewCourseDto>> GetPaging(CTableParameter parameter, CourseType courseType);
+        Task<List<ViewCourseDto>> GetPopularCourses();
         Task<CourseDetailDto> GetDetail(Guid id);
         Task<Guid> Apply(MyCourseCreateDto dto);
     }

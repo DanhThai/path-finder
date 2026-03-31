@@ -28,6 +28,12 @@ namespace Server.Learner.API
             return await _courseService.GetPaging(parameter, CourseType.CareerVideo);
         }
 
+        [HttpGet("course/popular")]
+        public async Task<List<ViewCourseDto>> GetPopularCourses()
+        {
+            return await _courseService.GetPopularCourses();
+        }
+        
         [HttpGet("course/{id}")]
         public async Task<CourseDetailDto> GetDetail(Guid id)
         {

@@ -38,6 +38,7 @@ namespace Server.Domain.Learner
         public Guid CategoryId { get; set; }
         public string CategoryName { get; set; }
         public int TaskCount { get; set; }
+        public int EnrolledCount { get; set; }
         public bool HasApplied { get; set; }
         public DocumentProperty Image { get; set; }
     }
